@@ -29,7 +29,7 @@ class cfct():
 class mmtn():
     name = 'Moscow Mountain high rainfall'
     code = 'MMTN'
-    serial_num = '6504'
+    serial_num = '6506'
 
 class mslk():
     name = 'Moses Lake irrigated'
