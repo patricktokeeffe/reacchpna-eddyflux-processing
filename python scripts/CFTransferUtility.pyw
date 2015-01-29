@@ -787,6 +787,9 @@ class CFTransferUtility(Frame):
                     for src, files in existing_files.items():
                         self.log.debug('Source directory: %s \n' % src)
                         for ea in list(set(self.__list_dat_files(src))-files):
+                            if osp.getsize(ea) > maxsize:
+                                self.log.info('~ Skipping oversized file %s ...' % ea)
+                                continue
                             destpath = osp.join(self._destdir_stdfmt.get(),
                                                 '%(table)s')
                             self.log.info('. Standardizing %s ... ' % ea)
