@@ -13,5 +13,5 @@ Data reduction for the REACCH Objective 2 GHG monitoring towers.
     * Processing telemetry data
 * Metadata
     * EddyPro: dynamic metadata files
-
+    * Ameriflux: Biological, Ancillary, Disturbance and Metadata (BADM) files
 
