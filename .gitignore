@@ -1,2 +1,5 @@
 *.pyc
 *.exe
+
+third-party resources/*.xlsx
+third-party resources/*.pdf

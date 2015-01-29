@@ -1,0 +1,10 @@
+http://ameriflux.lbl.gov/wp-content/uploads/2014/10/BADM-Site-General-Info-EXAMPLE_2.pdf    Ameriflux BADM Site General Info Example.pdf
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-Site-General-Info-Template.xlsx    Ameriflux BADM Site General Info Template.xlsx
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-Fluxes-Template.xlsx    Ameriflux BADM Fluxes Template.xlsx
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-Soil-Template.xlsx    Ameriflux BADM Soil Template.xlsx
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-VegCover-Template.xlsx    Ameriflux BADM VegCover Template.xlsx
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-Biomass-Template.xlsx    Ameriflux BADM Biomass Template.xlsx
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-CNKP-Template.xlsx    Ameriflux BADM CNKP Template.xlsx
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-Disturbance-Template.xlsx    Ameriflux BADM Disturbance Template.xlsx
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-Instrument-Template.xlsx    Ameriflux BADM Instrument Template.xlsx
+http://ameriflux.lbl.gov/wp-content/uploads/2014/09/BADM-Instrument_OM-Template.xlsx    Ameriflux BADM Instrument OM Template.xlsx
