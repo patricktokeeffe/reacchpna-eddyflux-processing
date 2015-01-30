@@ -786,7 +786,8 @@ class CFTransferUtility(Frame):
                     self.log.info('\nStarting standardizing routine \n')
                     for src, files in existing_files.items():
                         self.log.debug('Source directory: %s \n' % src)
-                        for ea in list(set(self.__list_dat_files(src))-files):
+                        to_stdize = list(set(self.__list_dat_files(src))-files)
+                        for ea in sorted(to_stdize):
                             if osp.getsize(ea) > maxsize:
                                 self.log.info('~ Skipping oversized file %s ...' % ea)
                                 continue
