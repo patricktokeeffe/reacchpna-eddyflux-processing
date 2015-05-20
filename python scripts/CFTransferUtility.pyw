@@ -43,6 +43,8 @@ class CFTransferUtility(Frame):
         Frame.__init__(self, parent, width=width)
         self.parent = parent
 
+        self._results = {}
+
         self._srcdir = StringVar() # init later on
 
         self._defdir_bin = RAW_BINARY
@@ -663,7 +665,6 @@ class CFTransferUtility(Frame):
 
     def __profile_files(self, flist):
         """build descriptions of tob3 files"""
-        self._results = {}
         for fname in flist:
             try:
                 fsize = osp.getsize(fname) / 1024
