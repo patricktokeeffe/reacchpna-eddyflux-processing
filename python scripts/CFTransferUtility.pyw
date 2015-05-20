@@ -450,10 +450,7 @@ class CFTransferUtility(Frame):
 
     def __enable_ascii_opts(self):
         """if converting to plain-text, enable associated options"""
-        if self._do_bin.get() and self._do_ascii.get():
-            state = NORMAL
-        else:
-            state = DISABLED
+        state = NORMAL if self._do_ascii.get() else DISABLED
         self.__ent_destascii.config(state=state)
         self.__btn_browseascii.config(state=state)
         self.__btn_defascii.config(state=state)
@@ -473,8 +470,7 @@ class CFTransferUtility(Frame):
 
     def __enable_split_file_opts(self):
         """if splitting files enable associated options"""
-        if (self._do_bin.get() and self._do_ascii.get() and
-                                                self._split_large_files.get()):
+        if (self._do_ascii.get() and self._split_large_files.get()):
             state = NORMAL
         else:
             state = DISABLED
