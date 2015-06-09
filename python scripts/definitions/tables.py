@@ -231,6 +231,7 @@ table_definitions = {
                    'CardStatus',
                    'RunSig',
                    'ProgSig',
+                   'GitRepoTag',
                    'hfp_installed'],
 
     'extra_info' : ['TIMESTAMP',
@@ -368,6 +369,9 @@ Keys are string data table names. Values are 4-tuples containing:
 
 col_alias = {
     ### See docstring below definition ###
+
+    ########## Vineyard pilot study ########################################
+    ('site_info', 'GitRepoTag') : ('', ''),
 
     ########## 20130507_XXXX - CURRENT #####################################
     ('stats30_ui', 'TIMESTAMP') : ('', ''),

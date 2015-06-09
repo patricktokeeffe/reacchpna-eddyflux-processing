@@ -33,9 +33,14 @@ class mslk():
     name = 'Moses Lake irrigated'
     code = 'MSLK'
     serial_num = '6505'
+ 
+class wine():
+    name = 'Vineyard Pilot Project'
+    code = 'WINE'
+    serial_num = '6504'
 
 
-site_list = [cfnt, cfct, mmtn, lind, mslk]
+site_list = [cfnt, cfct, mmtn, lind, mslk, wine]
 
 
 sn2code = dict([[site.serial_num, site.code] for site in site_list])
