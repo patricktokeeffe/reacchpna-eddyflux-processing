@@ -8,8 +8,6 @@
 @author: Patrick O'Keeffe <pokeeffe@wsu.edu>
 """
 
-from version import version as __version__
-
 
 class cfnt():
     name = 'Cook Agronomy Farm no-till'

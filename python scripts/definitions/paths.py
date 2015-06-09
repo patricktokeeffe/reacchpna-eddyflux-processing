@@ -8,8 +8,6 @@
 
 import os.path as osp
 
-from version import version as __version__
-
 #### Valid path substitions
 # These are the canonical available path substitutions. Not every script will
 # use all of them--the only exception may be `TOWERDATA`

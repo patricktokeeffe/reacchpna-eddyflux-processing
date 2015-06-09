@@ -11,8 +11,7 @@ import os
 from pandas import read_csv
 from warnings import warn
 
-from definitions.sites import sn2code
-from version import version as __version__
+from sites import sn2code
 
 
 MAX_RAW_FILE_SIZE = 200 * 1024 * 1024  #split raw data files > this, bytes

@@ -10,8 +10,6 @@
 from copy import copy
 from pandas.tseries.offsets import Day, MonthBegin
 
-from version import version as __version__
-
 
 class ColumnNotFoundError(Exception): pass
 """Raised when look up of nonexistant column is attempted"""
