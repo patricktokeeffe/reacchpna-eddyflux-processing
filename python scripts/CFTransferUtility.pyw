@@ -158,10 +158,7 @@ class CFTransferUtility(Frame):
                                command=self.__set_destdir_bin)
         btn_defbin = Button(binrow, text='Default',
                             command=self.__set_defdir_bin)
-        btn_viewbin = Button(binrow, text='View',
-                             command=self.__view_destdir_bin)
         chb_do_bin.pack(side=LEFT, expand=NO)
-        btn_viewbin.pack(side=RIGHT, expand=NO, padx=(5,0))
         btn_defbin.pack(side=RIGHT, expand=NO, padx=(5,0))
         btn_browsebin.pack(side=RIGHT, expand=NO, padx=(5,0))
         ent_destbin.pack(side=LEFT, expand=YES, fill=X)
@@ -185,10 +182,7 @@ class CFTransferUtility(Frame):
                                  command=self.__set_destdir_ascii)
         btn_defascii = Button(asciirow, text='Default',
                               command=self.__set_defdir_ascii)
-        btn_viewascii = Button(asciirow, text='View',
-                               command=self.__view_destdir_ascii)
         chb_do_ascii.pack(side=LEFT, expand=NO)
-        btn_viewascii.pack(side=RIGHT, expand=NO, padx=(5,0))
         btn_defascii.pack(side=RIGHT, expand=NO, padx=(5,0))
         btn_browseascii.pack(side=RIGHT, expand=NO, padx=(5,0))
         ent_destascii.pack(side=LEFT, expand=YES, fill=X)
@@ -240,15 +234,12 @@ class CFTransferUtility(Frame):
                                   command=self.__set_destdir_stdfmt)
         btn_defstdfmt = Button(stdfmtrow, text='Default',
                                command=self.__set_defdir_stdfmt)
-        btn_viewstdfmt = Button(stdfmtrow, text='View',
-                                command=self.__view_destdir_stdfmt)
         lbl_dest_hint = Label(stdfmtrow, anchor=W,
                              text=('*files will be sorted into '
                              'subdirectories of this location according '
                              'to corresponding table names'))
         lbl_dest_hint.pack(side=BOTTOM, expand=YES, fill=X, padx=(30,0))
         chb_do_stdfmt.pack(side=LEFT, expand=NO)
-        btn_viewstdfmt.pack(side=RIGHT, expand=NO, padx=(5,0))
         btn_defstdfmt.pack(side=RIGHT, expand=NO, padx=(5,0))
         btn_browsestdfmt.pack(side=RIGHT, expand=NO, padx=(5,0))
         ent_deststdfmt.pack(side=LEFT, expand=YES, fill=X)
@@ -298,17 +289,15 @@ class CFTransferUtility(Frame):
         self.__ent_destbin = ent_destbin
         self.__btn_browsebin = btn_browsebin
         self.__btn_defbin = btn_defbin
-        self.__btn_viewbin = btn_viewbin
         self.__chb_bin_ro = chb_bin_ro
         self.__chb_bin_arc = chb_bin_arc
         todisable.extend([chb_do_bin, ent_destbin, btn_browsebin, btn_defbin,
-                          btn_viewbin, chb_bin_ro, chb_bin_arc])
+                          chb_bin_ro, chb_bin_arc])
 
         self.__chb_do_ascii = chb_do_ascii
         self.__ent_destascii = ent_destascii
         self.__btn_browseascii = btn_browseascii
         self.__btn_defascii = btn_defascii
-        self.__btn_viewascii = btn_viewascii
         self.__chb_ascii_ro = chb_ascii_ro
         self.__chb_ascii_arc = chb_ascii_arc
         self.__chb_ascii_split = chb_ascii_split
@@ -316,17 +305,16 @@ class CFTransferUtility(Frame):
         self.__ent_ascii_size = ent_ascii_size
         self.__chb_ascii_del = chb_ascii_del
         todisable.extend([chb_do_ascii, ent_destascii, btn_browseascii,
-                          btn_defascii, btn_viewascii, chb_ascii_ro,
-                          chb_ascii_arc, chb_ascii_split, ent_ascii_lines,
-                          ent_ascii_size, chb_ascii_del])
+                          btn_defascii, chb_ascii_ro, chb_ascii_arc,
+                          chb_ascii_split, ent_ascii_lines, ent_ascii_size,
+                          chb_ascii_del])
 
         self.__chb_do_stdfmt = chb_do_stdfmt
         self.__ent_deststdfmt = ent_deststdfmt
         self.__btn_browsestdfmt = btn_browsestdfmt
         self.__btn_defstdfmt = btn_defstdfmt
-        self.__btn_viewstdfmt = btn_viewstdfmt
         todisable.extend([chb_do_stdfmt, ent_deststdfmt, btn_browsestdfmt,
-                          btn_defstdfmt, btn_viewstdfmt])
+                          btn_defstdfmt])
 
         self.__btn_begin = btn_begin
         self.__btn_empty = btn_empty
@@ -519,16 +507,7 @@ class CFTransferUtility(Frame):
 
 
     def __view_srcdir(self):
-        self.__view_dir(self._srcdir.get())
-    def __view_destdir_bin(self):
-        self.__view_dir(self._destdir_bin.get())
-    def __view_destdir_ascii(self):
-        self.__view_dir(self._destdir_ascii.get())
-    def __view_destdir_stdfmt(self):
-        self.__view_dir(self._destdir_stdfmt.get())
-
-
-    def __view_dir(self, dirpath):
+        dirpath = self._srcdir.get()
         if not dirpath:
             return
         try:
