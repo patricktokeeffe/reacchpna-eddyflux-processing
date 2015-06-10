@@ -28,7 +28,6 @@ from sys import stdout, exit
 from definitions.fileio import get_site_code
 from definitions.paths import TELEMETRY_SRC, TELEMETRY, TELEMETRY_LOG
 from standardize_toa5 import standardize_toa5
-from email_telemetry_plots import email_telemetry_plots
 from version import version as __version__
 
 logger = logging.getLogger(__name__)
@@ -101,10 +100,6 @@ if __name__ == '__main__':
         print(n, end=' ')
         sleep(1)
     print()
-    try:
-        email_telemetry_plots(logger)
-    except Exception as err:
-        logger.error('Could not generate telemetry plots: %s' % err)
     process_new_telemetry_data()
     logger.info('Done. Exiting in 10 seconds...\n')
     sleep(10)
