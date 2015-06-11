@@ -28,7 +28,7 @@ from tkMessageBox import (askokcancel, askyesnocancel, askyesno,
 from win32file import GetDriveType, DRIVE_REMOVABLE
 
 from definitions.fileio import MAX_RAW_FILE_SIZE
-from definitions.paths import RAW_ASCII, RAW_BINARY, RAW_STDFMT
+from definitions.paths import RAW_ASCII, RAW_STDFMT
 from definitions.sites import sn2code
 from split_toa5 import split_toa5, DEFAULT_MAX_LINES, DEFAULT_HDR_LINES
 from standardize_toa5 import standardize_toa5
@@ -47,20 +47,15 @@ class CFTransferUtility(Frame):
 
         self._srcdir = StringVar() # init later on
 
-        self._defdir_bin = RAW_BINARY
         self._defdir_ascii = RAW_ASCII
         self._defdir_stdfmt = RAW_STDFMT
 
-        self._destdir_bin = StringVar()
         self._destdir_ascii = StringVar()
         self._destdir_stdfmt = StringVar()
 
-        self._do_bin = BooleanVar(value=True)
         self._do_ascii = BooleanVar(value=True)
         self._do_stdfmt = BooleanVar(value=True)
 
-        self._set_bin_ro = BooleanVar(value=True)
-        self._set_bin_arc = BooleanVar(value=True)
         self._set_ascii_ro = BooleanVar(value=True)
         self._set_ascii_arc = BooleanVar(value=True)
 
@@ -82,7 +77,6 @@ class CFTransferUtility(Frame):
 
         self._num_threads = 8 # TIP modify # of processing threads available
 
-        self.__set_defdir_bin()
         self.__set_defdir_ascii()
         self.__set_defdir_stdfmt()
 
@@ -148,30 +142,6 @@ class CFTransferUtility(Frame):
         #### processing options frame
         this = LabelFrame(top, padx=5, pady=5, relief=RIDGE,
                           text='Processing options')
-
-        binrow = Frame(this)
-        chb_do_bin = Checkbutton(binrow, text='Copy binary files into:',
-                                 variable=self._do_bin,
-                                 command=self.__enable_bin_opts)
-        ent_destbin = Entry(binrow, textvariable=self._destdir_bin)
-        btn_browsebin = Button(binrow, text='Browse',
-                               command=self.__set_destdir_bin)
-        btn_defbin = Button(binrow, text='Default',
-                            command=self.__set_defdir_bin)
-        chb_do_bin.pack(side=LEFT, expand=NO)
-        btn_defbin.pack(side=RIGHT, expand=NO, padx=(5,0))
-        btn_browsebin.pack(side=RIGHT, expand=NO, padx=(5,0))
-        ent_destbin.pack(side=LEFT, expand=YES, fill=X)
-
-        binopt = Frame(this)
-        lbl_binopt = Label(binopt, text='Set attributes on copied files:')
-        chb_bin_ro = Checkbutton(binopt, text='read-only',
-                                 variable=self._set_bin_ro)
-        chb_bin_arc = Checkbutton(binopt, text='archive',
-                                  variable=self._set_bin_arc)
-        lbl_binopt.pack(side=LEFT, expand=NO)
-        chb_bin_arc.pack(side=LEFT, expand=NO)
-        chb_bin_ro.pack(side=LEFT, expand=NO)
 
         asciirow = Frame(this)
         chb_do_ascii = Checkbutton(asciirow, variable=self._do_ascii,
@@ -265,8 +235,6 @@ class CFTransferUtility(Frame):
         btn_empty.pack(side=RIGHT, expand=NO, padx=(5,0), pady=5)
 
         #### begin packing
-        binrow.pack(side=TOP, expand=NO, fill=X)
-        binopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
         asciirow.pack(side=TOP, expand=NO, fill=X)
         asciiopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
         splitopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
@@ -284,15 +252,6 @@ class CFTransferUtility(Frame):
         self.__btn_refresh = btn_refresh
         self.__btn_viewsrc = btn_viewsrc
         todisable.extend([ent_srcdir, btn_browsesrc, btn_refresh, btn_viewsrc])
-
-        self.__chb_do_bin = chb_do_bin
-        self.__ent_destbin = ent_destbin
-        self.__btn_browsebin = btn_browsebin
-        self.__btn_defbin = btn_defbin
-        self.__chb_bin_ro = chb_bin_ro
-        self.__chb_bin_arc = chb_bin_arc
-        todisable.extend([chb_do_bin, ent_destbin, btn_browsebin, btn_defbin,
-                          chb_bin_ro, chb_bin_arc])
 
         self.__chb_do_ascii = chb_do_ascii
         self.__ent_destascii = ent_destascii
@@ -331,13 +290,13 @@ class CFTransferUtility(Frame):
         top = LabelFrame(parent, padx=5, pady=5, relief=RIDGE,
                          text='Files found')
         self._resultstree = Treeview(top,selectmode='none',
-                        columns=('site', 'size', 'bin-fname'))
+                        columns=('site', 'size', 'ascii-fname'))
         self._resultstree.heading('#0', text='Source file path', anchor=W)
         self._resultstree.heading('site', text='Site code = %(site)s',
                                                            anchor=W)
         self._resultstree.heading('size', text='File size', anchor=W)
-        self._resultstree.heading('bin-fname', anchor=W,
-                                  text='Binary data file destination name')
+        self._resultstree.heading('ascii-fname', anchor=W,
+                                  text='Plain-text data file destination name')
         self._resultstree.pack(side=TOP, expand=YES, fill=BOTH)
         return top
 
@@ -426,16 +385,6 @@ class CFTransferUtility(Frame):
         self.__btn_begin.config(state=state)
 
 
-    def __enable_bin_opts(self):
-        """if copying binary, enable associated options"""
-        state = NORMAL if self._do_bin.get() else DISABLED
-        self.__ent_destbin.config(state=state)
-        self.__btn_browsebin.config(state=state)
-        self.__btn_defbin.config(state=state)
-        self.__chb_bin_ro.config(state=state)
-        self.__chb_bin_arc.config(state=state)
-
-
     def __enable_ascii_opts(self):
         """if converting to plain-text, enable associated options"""
         state = NORMAL if self._do_ascii.get() else DISABLED
@@ -472,8 +421,7 @@ class CFTransferUtility(Frame):
 
     def __enable_stdfmt_opts(self):
         """if re-writing to std format, enable associated options"""
-        if (self._do_bin.get() and self._do_ascii.get() and
-                                                self._do_stdfmt.get()):
+        if (self._do_ascii.get() and self._do_stdfmt.get()):
             state = NORMAL
         else:
             state = DISABLED
@@ -482,8 +430,6 @@ class CFTransferUtility(Frame):
         self.__btn_defstdfmt.config(state=state)
 
 
-    def __set_destdir_bin(self):
-        self.__set_destdir(var=self._destdir_bin, name='binary')
     def __set_destdir_ascii(self):
         self.__set_destdir(var=self._destdir_ascii, name='plain-text')
     def __set_destdir_stdfmt(self):
@@ -498,8 +444,6 @@ class CFTransferUtility(Frame):
             var.set(choice)
 
 
-    def __set_defdir_bin(self):
-        self._destdir_bin.set(self._defdir_bin)
     def __set_defdir_ascii(self):
         self._destdir_ascii.set(self._defdir_ascii)
     def __set_defdir_stdfmt(self):
@@ -551,16 +495,17 @@ class CFTransferUtility(Frame):
         for row in w.get_children():
             w.delete(row)
         for (fpath, meta) in sorted(self._results.items()):
-            site, fsize, bname = meta['site'], meta['size'], meta['bin-fname']
+            site, fsize, aname = meta['site'], meta['size'], meta['ascii-fname']
             tags = []
             if ascii and split and (fsize > maxsize):
                 tags.append('+size')
-            if not bname:
+            if not aname:
                 tags.append('invalid')
             else:
                 valid_files.append(fpath)
             w.insert('', END, iid=fpath, text=fpath, tags=tags,
-                     values=[site, str(fsize)+' KB', bname])
+                     values=[site, str(fsize)+' KB', "TOA5_"+aname])
+                     #### HACK CardConvert will prepend files with "TOA5_"
         self._resultstree.tag_configure('+size', background='lightgray')
         self._resultstree.tag_configure('invalid', background='pink')
         return valid_files
@@ -574,7 +519,6 @@ class CFTransferUtility(Frame):
             if 'state' in widget.config():
                 widget.config(state=state)
         if not isLocked: # if all were unlocked, selectively re-disable
-            self.__enable_bin_opts()
             self.__enable_ascii_opts()
             self.__enable_split_file_opts()
             self.__enable_stdfmt_opts()
@@ -623,16 +567,10 @@ class CFTransferUtility(Frame):
         return {'site':site, 'tsstr':tsstr, 'table':table}
 
 
-    def __create_bindest_fname(self, site, table, tstamp):
-        """raw binary file names"""
-        ts = tstamp.replace('-','').replace(':','').replace(' ','.')[:-2]
-        fname = '%s_%s_%s.dat' % (site, ts, table)
-        return fname
-
-
-    def __create_asciidest_fname(self, bindest_fname):
+    def __create_asciidest_fname(self, site, table, tstamp):
         """CardConvert prepends files with 'TOA5_'; rename before converting"""
-        return 'TOA5_'+bindest_fname
+        ts = tstamp.replace('-','').replace(':','').replace(' ','.')[:-2]
+        return '%s_%s_%s.dat' % (site, ts, table)
 
 
     #### standardize_toa5 handles it's own output file names
@@ -650,37 +588,34 @@ class CFTransferUtility(Frame):
                 continue
             except (self._FileFormatError, self._NonparticipantError) as err:
                 self._results[fname] = {'site': str(err), 'size':fsize,
-                                'table':'', 'bin-fname':'', 'ascii-fname':''}
+                                'table':'', 'ascii-fname':''}
                 continue
-            bindestname = self.__create_bindest_fname(meta['site'],
-                                                      meta['table'],
-                                                      meta['tsstr'])
-            asciidestname = self.__create_asciidest_fname(bindestname)
+            asciidestname = self.__create_asciidest_fname(meta['site'],
+                                                          meta['table'],
+                                                          meta['tsstr'])
             self._results[fname] = {'site' : meta['site'],
                                     'size' : fsize,
                                     'table' : meta['table'],
-                                    'bin-fname' : bindestname,
                                     'ascii-fname' : asciidestname}
 
 
     def __begin_processing(self):
         """process data files"""
         self.log.debug('Entering processing routine \n')
-        do_binary = self._do_bin.get()
         do_ascii = self._do_ascii.get()
         do_stdfmt = self._do_stdfmt.get()
         split_files = self._split_large_files.get()
         num_threads = self._num_threads
 
-        if not (do_binary or do_ascii):
+        if not do_ascii:
             return
         self.__set_GUI_lock(True)
-        binQ, ccQ, splitQ, stdQ = Queue(), Queue(), Queue(), Queue()
+        ccQ, splitQ, stdQ = Queue(), Queue(), Queue()
 
         # segregate by do/don't process and source site
         bysite = {}
         for (fname, meta) in sorted(self._results.items()):
-            if not meta['bin-fname']:
+            if not meta['ascii-fname']:
                 self.log.info('! Skipping %s (%s) \n' % (fname, meta['site']))
                 continue
             asite = bysite.setdefault(meta['site'], {})
@@ -695,28 +630,12 @@ class CFTransferUtility(Frame):
             tmpdir = tempfile.mkdtemp(dir=self._srcdir.get())
             tmp_dirs[site] = tmpdir
             for origname, meta in files.items():
-                newname = osp.join(tmpdir, meta['bin-fname'])
+                newname = osp.join(tmpdir, meta['ascii-fname'])
                 os.rename(origname, newname)
                 orig_names[newname] = origname
                 to_process[newname] = meta
 
         try:
-            ## copy binary files
-            if do_binary:
-                self.log.info('\nStarting binary file transfer \n')
-                set_ro = self._set_bin_ro.get()
-                set_arc = self._set_bin_arc.get()
-                for i in range(num_threads):
-                    T = self._ThreadedBinCopy(self, binQ)
-                    T.setDaemon(True)
-                    T.start()
-                for (fname, meta) in sorted(to_process.items()):
-                    destdir = self._destdir_bin.get() % {'site' : meta['site']}
-                    binQ.put( (fname, destdir, set_ro, set_arc) )
-                while binQ.unfinished_tasks:
-                    self.parent.update_idletasks()
-                    time.sleep(0.5)
-
             # convert binary into ascii files
             if do_ascii:
                 self.log.info('\nStarting binary to plain-text conversion \n')
@@ -822,79 +741,6 @@ class CFTransferUtility(Frame):
             self.log.error('! Failed to %sset archive flag (%s): %s \n' %
                             (('' if active else 'un'), fname, err))
             return False
-
-
-    class _ThreadedBinCopy(Thread):
-        """threaded wrapper for __copy_binary_file"""
-        def __init__(self, parent, queue):
-            Thread.__init__(self)
-            self.parent = parent
-            self.q = queue
-        def run(self):
-            while True:
-                (from_, to_, set_ro, set_arc) = self.q.get()
-                self.parent._copy_binary_file(from_, to_, set_ro, set_arc)
-                self.q.task_done()
-
-
-    def _copy_binary_file(self, frompath, todir, set_ro=False, set_arc=False):
-        """copy single binary data file, verify and set attribs"""
-        self.log.debug('Entering binary file copy routine (%s -> %s) \n' %
-                        (frompath, todir))
-        copiedOK = False
-        try:
-            copiedOK = self._xcopy(frompath, todir) # TODO overwrite=False ?
-            # string "1 File(s) copied" is nominally returned; on a caught
-            # exceptional condition, False is returned
-        except: # FIXME
-            pass
-        destname = osp.join(todir, osp.basename(frompath))
-        if copiedOK:
-            self.log.info('> Copied %s into %s \n' %
-                          (osp.basename(frompath), todir))
-            if set_ro: self._set_readonly_attr(destname)
-            if set_arc: self._set_archive_attr(destname)
-        else:
-            if osp.isfile(destname):
-                self.log.warn('! Copy failed (file already exists): %s -> %s\n'
-                              % (frompath, todir))
-            else:
-                self.log.error('! Copy failed: %s -> %s\n' % (frompath, todir))
-
-
-    def _xcopy(self, from_fpath, to_dir, overwrite=False):
-        """Use extended tools of xcopy to move file + metadata"""
-        self.log.debug('Entered `xcopy`: %s to %s \n' % (from_fpath, to_dir))
-        try:
-            if not overwrite:
-                if osp.isfile(osp.join(to_dir, osp.basename(from_fpath))):
-                    # necessary to check because os.system call hangs when
-                    # attempting to query user "destination file or directory"?
-                    return False
-            try:
-                # similar to above, ensure target directory exists to supress
-                # user query which hangs up os.system
-                os.makedirs(to_dir)
-            except OSError:
-                if not osp.isdir(to_dir):
-                    raise
-            fr = from_fpath
-            to = to_dir
-            ow = ' /Y' if overwrite else ''
-            rc = check_output('xcopy "%s" "%s" /C /K /Q /V /X%s' % (fr, to, ow),
-                              shell=True)
-            #   /C      continue, even on error
-            #   /K      copies attributes (default is reset)
-            #   /Q      quiet output
-            #   /V      verify each new file
-            #   /X      copies file audit settings (incl ownership/ACL)
-            #   /Y      suppresses prompt to overwrite existing file
-            return rc.strip()
-        except CalledProcessError as err:
-            self.log.debug('! Failed xcopy (%s -> %s): %s \n' %
-                            (from_fpath, to_dir, err))
-            return False # some other error occurred; file already exists
-                         # errors handled by first "return False"
 
 
     class _ThreadedCC(Thread):
