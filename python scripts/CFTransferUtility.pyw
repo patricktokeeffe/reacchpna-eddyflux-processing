@@ -59,6 +59,7 @@ class CFTransferUtility(Frame):
         self._set_ascii_ro = BooleanVar(value=True)
         self._set_ascii_arc = BooleanVar(value=True)
         self._do_checksums = BooleanVar(value=True)
+        self._do_archive = BooleanVar(value=True)
 
         self._split_large_files = BooleanVar(value=True)
         self._split_max_size = IntVar(value=(MAX_RAW_FILE_SIZE/1024/1024))
@@ -75,6 +76,7 @@ class CFTransferUtility(Frame):
         self.pack(expand=YES, fill=BOTH)
 
         self._cc_path = self.__find_CardConvert()
+        self._7z_path = self.__find_7zip()
 
         self._num_threads = 8 # TIP modify # of processing threads available
 
@@ -176,6 +178,12 @@ class CFTransferUtility(Frame):
                                  variable=self._do_checksums)
         chb_md5sum.pack(side=LEFT, expand=NO)
 
+        archiveopt = Frame(this)
+        chb_archive = Checkbutton(archiveopt,
+                                  text="Create .zip archive",
+                                  variable=self._do_archive)
+        chb_archive.pack(side=LEFT, expand=NO)
+
         ## ensure 'numeric' field entries always contain (only) numbers
         isdigit_validator = (self.register(self.__verify_ent_isdigit), '%P')
 
@@ -247,6 +255,7 @@ class CFTransferUtility(Frame):
         asciirow.pack(side=TOP, expand=NO, fill=X)
         asciiopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
         md5sumopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
+        archiveopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
         splitopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
         stdfmtrow.pack(side=TOP, expand=NO, fill=X)
         subst_hint.pack(side=TOP, expand=NO, fill=X, pady=(8,0))
@@ -270,14 +279,15 @@ class CFTransferUtility(Frame):
         self.__chb_ascii_ro = chb_ascii_ro
         self.__chb_ascii_arc = chb_ascii_arc
         self.__chb_md5sum = chb_md5sum
+        self.__chb_archive = chb_archive
         self.__chb_ascii_split = chb_ascii_split
         self.__ent_ascii_lines = ent_ascii_lines
         self.__ent_ascii_size = ent_ascii_size
         self.__chb_ascii_del = chb_ascii_del
         todisable.extend([chb_do_ascii, ent_destascii, btn_browseascii,
                           btn_defascii, chb_ascii_ro, chb_ascii_arc,
-                          chb_md5sum, chb_ascii_split, ent_ascii_lines,
-                          ent_ascii_size, chb_ascii_del])
+                          chb_md5sum, chb_archive, chb_ascii_split,
+                          ent_ascii_lines, ent_ascii_size, chb_ascii_del])
 
         self.__chb_do_stdfmt = chb_do_stdfmt
         self.__ent_deststdfmt = ent_deststdfmt
@@ -366,6 +376,27 @@ class CFTransferUtility(Frame):
                                     )
             if guess and osp.isfile(guess):
                 return guess
+        self.__exit(quickly=True)
+
+
+    def __find_7zip(self):
+        """Search local system for 7-Zip File Manager"""
+        guesses = (osp.join(os.environ['PROGRAMFILES'], r'7-Zip\7z.exe'),
+                   r'C:\Program Files\7-Zip\7z.exe',
+                   r'C:\Program Files (x86)\7-Zip\7z.exe')
+        for guess in guesses:
+            if osp.isfile(guess):
+                return guess
+        msg = ('Could not locate the 7-Zip File Manager executable (7z.exe).'
+               '\nPress "Yes" to browse for the file or "No" to exit.')
+        choice = askyesno(message=msg, title='7-Zip not found')
+        if choice:
+            browse = askopenfilename(title='Locate 7-Zip',
+                                    filetypes=[('Applications', '*.exe'),
+                                               ('All file types', '*.*')],
+                                    initialdir=os.environ['PROGRAMFILES'])
+            if browse and osp.isfile(browse):
+                return browse
         self.__exit(quickly=True)
 
 
@@ -654,6 +685,7 @@ class CFTransferUtility(Frame):
                 set_ro = self._set_ascii_ro.get()
                 set_arc = self._set_ascii_arc.get()
                 do_md5 = self._do_checksums.get()
+                do_zip = self._do_archive.get()
                 existing_files = {}
                 for i in range(num_threads):
                     T = self._ThreadedCC(self, ccQ)
@@ -663,7 +695,7 @@ class CFTransferUtility(Frame):
                     source = dir_
                     target = self._destdir_ascii.get() % {'site' : site}
                     existing_files[target] = set(self.__list_dat_files(target))
-                    ccQ.put( (source, target, set_ro, set_arc, do_md5) )
+                    ccQ.put( (source, target, set_ro, set_arc, do_md5, do_zip) )
                 while ccQ.unfinished_tasks:
                     self.parent.update_idletasks()
                     time.sleep(0.5)
@@ -768,6 +800,26 @@ class CFTransferUtility(Frame):
             return False
 
 
+    def _archive_ascii(self, filelist, destdir):
+        self.log.debug('Entered `archive_ascii` with %d files' % len(filelist))
+        exepath = self._7z_path
+        if not osp.isfile(exepath):
+            self.log.error('! 7-Zip is no longer available! Aborting')
+            return False
+
+        try:
+            cmd = '"%(7zpath)s" a -tzip "%(outfile)s" "%(files)s"'
+            rc = check_output(cmd % {'7zpath': exepath,
+                                     'outfile' : destdir,
+                                     'files' : '" "'.join(filelist)},
+                              shell=True)
+            self.log.info('\n%s\n' % rc)
+            return True
+        except CalledProcessError as err:
+            self.log.error('! Failed to create .zip archive: %s \n' % err)
+            return False
+
+
     class _ThreadedCC(Thread):
         def __init__(self, parent, queue):
             Thread.__init__(self)
@@ -775,19 +827,20 @@ class CFTransferUtility(Frame):
             self.q = queue
         def run(self):
             while True:
-                (source, target, RO, ARCH, MD5) = self.q.get()
-                self.parent._launch_cardconvert(source, target, RO, ARCH, MD5)
+                (source, target, RO, ARCH, MD5, ZIP) = self.q.get()
+                self.parent._launch_cardconvert(source, target, RO, ARCH, MD5, ZIP)
                 self.q.task_done()
 
 
     def _launch_cardconvert(self, source, target, set_ro=False, set_arc=False,
-                            do_md5sums=False):
+                            do_md5sums=False, do_archive=False):
         self.log.debug('Entering binary file conversion routine \n')
 
         orig_files = set(self.__list_dat_files(target))
 
         # TODO handle need to overwriting existing files
-        self._CardConvert(source, target)
+        if not self._CardConvert(source, target):
+            return
 
         new_files = list(set(self.__list_dat_files(target)) - orig_files)
         for ea in new_files:
@@ -796,7 +849,10 @@ class CFTransferUtility(Frame):
             if set_arc:
                 self._set_archive_attr(ea)
         if do_md5sums:
-            self._checksum_ascii(new_files)
+            if self._checksum_ascii(new_files):
+                new_files.append(osp.join(target, 'md5sums'))
+        if do_archive:
+            self._archive_ascii(new_files, target) #### TODO different target
 
 
     def _CardConvert(self, source_dir, target_dir):
@@ -849,7 +905,7 @@ BaleInterval=32875
         except (IOError, OSError):
             self.log.warn('# Could not remove temp file containing '
                           'CardConvert settings\n')
-        return rc
+        return True
 
 
     class _ThreadedSplitFile(Thread):
