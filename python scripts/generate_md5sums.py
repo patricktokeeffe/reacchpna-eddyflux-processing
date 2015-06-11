@@ -63,12 +63,16 @@ if __name__ == '__main__':
     print 'Output file name:', md5file
 
     if osp.isfile(md5file): 
-        print '  * Detected file "md5sums" already exists, renaming to "md5sums.bak"'
+        print '  * Detected file `md5sums` already exists, renaming to `md5sums.bak`'
         try:
             os.rename(md5file, md5file+".bak")
         except OSError as e:
-            raw_input('\nCould not move existing file! Press enter to '
-                      'continue (overwriting "md5sums") or Ctrl+C to exit.\n')
+            print '  ~ Overwriting existing backup `md5sums.bak`'
+            try:
+                os.remove(md5file+".bak")
+                os.rename(md5file, md5file+".bak")
+            except OSError as e:
+                print '  ! Could not replace existing backup'
 
     blocksize = 2**20
     try:
