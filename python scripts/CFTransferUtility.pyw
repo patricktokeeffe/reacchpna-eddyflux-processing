@@ -58,6 +58,7 @@ class CFTransferUtility(Frame):
 
         self._set_ascii_ro = BooleanVar(value=True)
         self._set_ascii_arc = BooleanVar(value=True)
+        self._do_checksums = BooleanVar(value=True)
 
         self._split_large_files = BooleanVar(value=True)
         self._split_max_size = IntVar(value=(MAX_RAW_FILE_SIZE/1024/1024))
@@ -158,7 +159,7 @@ class CFTransferUtility(Frame):
         ent_destascii.pack(side=LEFT, expand=YES, fill=X)
 
         asciiopt = Frame(this)
-        lbl_asciiopt = Label(asciiopt, text='Set attributes on copied files:')
+        lbl_asciiopt = Label(asciiopt, text='Set attributes on created files:')
         chb_ascii_ro = Checkbutton(asciiopt, text='read-only',
                                    variable=self._set_ascii_ro)
         chb_ascii_arc = Checkbutton(asciiopt, text='archive',
@@ -166,6 +167,14 @@ class CFTransferUtility(Frame):
         lbl_asciiopt.pack(side=LEFT, expand=NO)
         chb_ascii_arc.pack(side=LEFT, expand=NO)
         chb_ascii_ro.pack(side=LEFT, expand=NO)
+
+        md5sumopt = Frame(this)
+        chb_md5sum = Checkbutton(md5sumopt,
+                                 text=("Calculate md5 checksums of created "
+                                       "files, save to `md5sums` (existing "
+                                       "is renamed to `md5sums.bak`)"),
+                                 variable=self._do_checksums)
+        chb_md5sum.pack(side=LEFT, expand=NO)
 
         ## ensure 'numeric' field entries always contain (only) numbers
         isdigit_validator = (self.register(self.__verify_ent_isdigit), '%P')
@@ -237,6 +246,7 @@ class CFTransferUtility(Frame):
         #### begin packing
         asciirow.pack(side=TOP, expand=NO, fill=X)
         asciiopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
+        md5sumopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
         splitopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
         stdfmtrow.pack(side=TOP, expand=NO, fill=X)
         subst_hint.pack(side=TOP, expand=NO, fill=X, pady=(8,0))
@@ -259,14 +269,15 @@ class CFTransferUtility(Frame):
         self.__btn_defascii = btn_defascii
         self.__chb_ascii_ro = chb_ascii_ro
         self.__chb_ascii_arc = chb_ascii_arc
+        self.__chb_md5sum = chb_md5sum
         self.__chb_ascii_split = chb_ascii_split
         self.__ent_ascii_lines = ent_ascii_lines
         self.__ent_ascii_size = ent_ascii_size
         self.__chb_ascii_del = chb_ascii_del
         todisable.extend([chb_do_ascii, ent_destascii, btn_browseascii,
                           btn_defascii, chb_ascii_ro, chb_ascii_arc,
-                          chb_ascii_split, ent_ascii_lines, ent_ascii_size,
-                          chb_ascii_del])
+                          chb_md5sum, chb_ascii_split, ent_ascii_lines,
+                          ent_ascii_size, chb_ascii_del])
 
         self.__chb_do_stdfmt = chb_do_stdfmt
         self.__ent_deststdfmt = ent_deststdfmt
@@ -393,6 +404,7 @@ class CFTransferUtility(Frame):
         self.__btn_defascii.config(state=state)
         self.__chb_ascii_ro.config(state=state)
         self.__chb_ascii_arc.config(state=state)
+        self.__chb_md5sum.config(state=state)
         self.__chb_ascii_split.config(state=state)
         self.__ent_ascii_size.config(state=state)
         self.__ent_ascii_lines.config(state=state)
@@ -641,6 +653,7 @@ class CFTransferUtility(Frame):
                 self.log.info('\nStarting binary to plain-text conversion \n')
                 set_ro = self._set_ascii_ro.get()
                 set_arc = self._set_ascii_arc.get()
+                do_md5 = self._do_checksums.get()
                 existing_files = {}
                 for i in range(num_threads):
                     T = self._ThreadedCC(self, ccQ)
@@ -650,7 +663,7 @@ class CFTransferUtility(Frame):
                     source = dir_
                     target = self._destdir_ascii.get() % {'site' : site}
                     existing_files[target] = set(self.__list_dat_files(target))
-                    ccQ.put( (source, target, set_ro, set_arc) )
+                    ccQ.put( (source, target, set_ro, set_arc, do_md5) )
                 while ccQ.unfinished_tasks:
                     self.parent.update_idletasks()
                     time.sleep(0.5)
@@ -743,6 +756,18 @@ class CFTransferUtility(Frame):
             return False
 
 
+    def _checksum_ascii(self, filelist):
+        self.log.debug('Entered `checksum_ascii` with %d files' % len(filelist))
+        try:
+            cmd = 'generate_md5sums.py ' + ' '.join(filelist)
+            rc = check_output(cmd, shell=True)
+            self.log.info('\n%s\n' % rc.strip())
+            return True
+        except CalledProcessError as err:
+            self.log.error('! Failed to create checksum file: %s \n' % err)
+            return False
+
+
     class _ThreadedCC(Thread):
         def __init__(self, parent, queue):
             Thread.__init__(self)
@@ -750,19 +775,19 @@ class CFTransferUtility(Frame):
             self.q = queue
         def run(self):
             while True:
-                (source, target, RO, ARCH) = self.q.get()
-                self.parent._launch_cardconvert(source, target, RO, ARCH)
+                (source, target, RO, ARCH, MD5) = self.q.get()
+                self.parent._launch_cardconvert(source, target, RO, ARCH, MD5)
                 self.q.task_done()
 
 
-    def _launch_cardconvert(self, source, target, set_ro=False, set_arc=False):
+    def _launch_cardconvert(self, source, target, set_ro=False, set_arc=False,
+                            do_md5sums=False):
         self.log.debug('Entering binary file conversion routine \n')
 
         orig_files = set(self.__list_dat_files(target))
 
         # TODO handle need to overwriting existing files
-        if not self._CardConvert(source, target):
-            return
+        self._CardConvert(source, target)
 
         new_files = list(set(self.__list_dat_files(target)) - orig_files)
         for ea in new_files:
@@ -770,6 +795,8 @@ class CFTransferUtility(Frame):
                 self._set_readonly_attr(ea)
             if set_arc:
                 self._set_archive_attr(ea)
+        if do_md5sums:
+            self._checksum_ascii(new_files)
 
 
     def _CardConvert(self, source_dir, target_dir):
