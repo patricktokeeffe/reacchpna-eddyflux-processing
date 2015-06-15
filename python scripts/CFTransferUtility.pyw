@@ -53,7 +53,6 @@ class CFTransferUtility(Frame):
         self._destdir_ascii = StringVar()
         self._destdir_stdfmt = StringVar()
 
-        self._do_ascii = BooleanVar(value=True)
         self._do_stdfmt = BooleanVar(value=True)
 
         self._set_ascii_ro = BooleanVar(value=True)
@@ -144,16 +143,14 @@ class CFTransferUtility(Frame):
         this = LabelFrame(top, padx=5, pady=5, relief=RIDGE,
                           text='Processing options')
 
-        asciirow = Frame(this)
-        chb_do_ascii = Checkbutton(asciirow, variable=self._do_ascii,
-                                   text='Generate plain-text files, save in:',
-                                   command=self.__enable_ascii_opts)
-        ent_destascii = Entry(asciirow, textvariable=self._destdir_ascii)
-        btn_browseascii = Button(asciirow, text='Browse',
+        toa5row = Frame(this)
+        lbl_toa5 = Label(toa5row, text='Generate TOA5 files, save in:')
+        ent_destascii = Entry(toa5row, textvariable=self._destdir_ascii)
+        btn_browseascii = Button(toa5row, text='Browse',
                                  command=self.__set_destdir_ascii)
-        btn_defascii = Button(asciirow, text='Default',
+        btn_defascii = Button(toa5row, text='Default',
                               command=self.__set_defdir_ascii)
-        chb_do_ascii.pack(side=LEFT, expand=NO)
+        lbl_toa5.pack(side=LEFT, expand=NO)
         btn_defascii.pack(side=RIGHT, expand=NO, padx=(5,0))
         btn_browseascii.pack(side=RIGHT, expand=NO, padx=(5,0))
         ent_destascii.pack(side=LEFT, expand=YES, fill=X)
@@ -244,10 +241,11 @@ class CFTransferUtility(Frame):
         btn_empty.pack(side=RIGHT, expand=NO, padx=(5,0), pady=5)
 
         #### begin packing
-        asciirow.pack(side=TOP, expand=NO, fill=X)
-        asciiopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
-        md5sumopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
-        splitopt.pack(side=TOP, expand=NO, fill=X, padx=(40,0))
+        INDENT = 20
+        toa5row.pack(side=TOP, expand=NO, fill=X)
+        asciiopt.pack(side=TOP, expand=NO, fill=X, padx=(INDENT,0))
+        md5sumopt.pack(side=TOP, expand=NO, fill=X, padx=(INDENT,0))
+        splitopt.pack(side=TOP, expand=NO, fill=X, padx=(INDENT,0))
         stdfmtrow.pack(side=TOP, expand=NO, fill=X)
         subst_hint.pack(side=TOP, expand=NO, fill=X, pady=(8,0))
 
@@ -263,7 +261,6 @@ class CFTransferUtility(Frame):
         self.__btn_viewsrc = btn_viewsrc
         todisable.extend([ent_srcdir, btn_browsesrc, btn_refresh, btn_viewsrc])
 
-        self.__chb_do_ascii = chb_do_ascii
         self.__ent_destascii = ent_destascii
         self.__btn_browseascii = btn_browseascii
         self.__btn_defascii = btn_defascii
@@ -274,7 +271,7 @@ class CFTransferUtility(Frame):
         self.__ent_ascii_lines = ent_ascii_lines
         self.__ent_ascii_size = ent_ascii_size
         self.__chb_ascii_del = chb_ascii_del
-        todisable.extend([chb_do_ascii, ent_destascii, btn_browseascii,
+        todisable.extend([ent_destascii, btn_browseascii,
                           btn_defascii, chb_ascii_ro, chb_ascii_arc,
                           chb_md5sum, chb_ascii_split, ent_ascii_lines,
                           ent_ascii_size, chb_ascii_del])
@@ -396,33 +393,9 @@ class CFTransferUtility(Frame):
         self.__btn_begin.config(state=state)
 
 
-    def __enable_ascii_opts(self):
-        """if converting to plain-text, enable associated options"""
-        state = NORMAL if self._do_ascii.get() else DISABLED
-        self.__ent_destascii.config(state=state)
-        self.__btn_browseascii.config(state=state)
-        self.__btn_defascii.config(state=state)
-        self.__chb_ascii_ro.config(state=state)
-        self.__chb_ascii_arc.config(state=state)
-        self.__chb_md5sum.config(state=state)
-        self.__chb_ascii_split.config(state=state)
-        self.__ent_ascii_size.config(state=state)
-        self.__ent_ascii_lines.config(state=state)
-        self.__chb_ascii_del.config(state=state)
-
-        self.__chb_do_stdfmt.config(state=state)
-        self.__ent_deststdfmt.config(state=state)
-        self.__btn_browsestdfmt.config(state=state)
-        self.__btn_defstdfmt.config(state=state)
-        self.__refresh_profiler()
-
-
     def __enable_split_file_opts(self):
         """if splitting files enable associated options"""
-        if (self._do_ascii.get() and self._split_large_files.get()):
-            state = NORMAL
-        else:
-            state = DISABLED
+        state = NORMAL if self._split_large_files.get() else DISABLED
         self.__ent_ascii_size.config(state=state)
         self.__ent_ascii_lines.config(state=state)
         self.__chb_ascii_del.config(state=state)
@@ -433,10 +406,7 @@ class CFTransferUtility(Frame):
 
     def __enable_stdfmt_opts(self):
         """if re-writing to std format, enable associated options"""
-        if (self._do_ascii.get() and self._do_stdfmt.get()):
-            state = NORMAL
-        else:
-            state = DISABLED
+        state = NORMAL if self._do_stdfmt.get() else DISABLED
         self.__ent_deststdfmt.config(state=state)
         self.__btn_browsestdfmt.config(state=state)
         self.__btn_defstdfmt.config(state=state)
@@ -500,7 +470,6 @@ class CFTransferUtility(Frame):
     def __refresh_profiler(self):
         """reconstruct results pane treeview"""
         w = self._resultstree
-        ascii = self._do_ascii.get()
         split = self._split_large_files.get()
         maxsize = self._split_max_size.get() * 1024 # scale MB -> KB
         valid_files = []
@@ -509,7 +478,7 @@ class CFTransferUtility(Frame):
         for (fpath, meta) in sorted(self._results.items()):
             site, fsize, aname = meta['site'], meta['size'], meta['ascii-fname']
             tags = []
-            if ascii and split and (fsize > maxsize):
+            if split and (fsize > maxsize):
                 tags.append('+size')
             if not aname:
                 tags.append('invalid')
@@ -614,13 +583,10 @@ class CFTransferUtility(Frame):
     def __begin_processing(self):
         """process data files"""
         self.log.debug('Entering processing routine \n')
-        do_ascii = self._do_ascii.get()
         do_stdfmt = self._do_stdfmt.get()
         split_files = self._split_large_files.get()
         num_threads = self._num_threads
 
-        if not do_ascii:
-            return
         self.__set_GUI_lock(True)
         ccQ, splitQ, stdQ = Queue(), Queue(), Queue()
 
@@ -649,27 +615,26 @@ class CFTransferUtility(Frame):
 
         try:
             # convert binary into ascii files
-            if do_ascii:
-                self.log.info('\nStarting binary to plain-text conversion \n')
-                set_ro = self._set_ascii_ro.get()
-                set_arc = self._set_ascii_arc.get()
-                do_md5 = self._do_checksums.get()
-                existing_files = {}
-                for i in range(num_threads):
-                    T = self._ThreadedCC(self, ccQ)
-                    T.setDaemon(True)
-                    T.start()
-                for (site, dir_) in tmp_dirs.items():
-                    source = dir_
-                    target = self._destdir_ascii.get() % {'site' : site}
-                    existing_files[target] = set(self.__list_dat_files(target))
-                    ccQ.put( (source, target, set_ro, set_arc, do_md5) )
-                while ccQ.unfinished_tasks:
-                    self.parent.update_idletasks()
-                    time.sleep(0.5)
+            self.log.info('\nStarting binary to plain-text conversion \n')
+            set_ro = self._set_ascii_ro.get()
+            set_arc = self._set_ascii_arc.get()
+            do_md5 = self._do_checksums.get()
+            existing_files = {}
+            for i in range(num_threads):
+                T = self._ThreadedCC(self, ccQ)
+                T.setDaemon(True)
+                T.start()
+            for (site, dir_) in tmp_dirs.items():
+                source = dir_
+                target = self._destdir_ascii.get() % {'site' : site}
+                existing_files[target] = set(self.__list_dat_files(target))
+                ccQ.put( (source, target, set_ro, set_arc, do_md5) )
+            while ccQ.unfinished_tasks:
+                self.parent.update_idletasks()
+                time.sleep(0.5)
 
             # locate newly-made TOA5 files
-            if do_ascii and split_files:
+            if split_files:
                 self.log.info('\nStarting oversized file split routine \n')
                 maxsize = self._split_max_size.get()*1024*1024 # MB -> bytes
                 num_lines = self._split_num_lines.get()
