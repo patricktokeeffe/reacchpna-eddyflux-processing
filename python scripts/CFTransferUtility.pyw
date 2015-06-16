@@ -725,7 +725,7 @@ class CFTransferUtility(Frame):
         """Set file's archive attribute true"""
         self.log.debug('Entered `set_archive_attr` targeting %s \n' % fname)
         try:
-            msg = '%setting archive flag: %%s ... ' % ('+ S' if active
+            msg = '%setting archive   flag: %%s ... ' % ('+ S' if active
                                                        else '- Uns')
             cmd = 'attrib %sA "%%s"' % ('+' if active else '-')
             rc = check_output(cmd % fname, shell=True)
