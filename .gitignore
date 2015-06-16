@@ -1,5 +1,7 @@
 *.pyc
 *.exe
 
+python scripts/*.ini
+
 third-party resources/*.xlsx
 third-party resources/*.pdf

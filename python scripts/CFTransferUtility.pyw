@@ -18,6 +18,8 @@ from subprocess import check_output, CalledProcessError
 from threading import Thread
 from Queue import Queue
 
+from ConfigParser import SafeConfigParser
+
 from Tkinter import *   # analysis:ignore
 from ttk import Treeview
 from ScrolledText import ScrolledText
@@ -29,7 +31,6 @@ from win32file import GetDriveType, DRIVE_REMOVABLE
 
 from definitions.fileio import MAX_RAW_FILE_SIZE
 from definitions.paths import RAW_ASCII, RAW_STDFMT
-from definitions.sites import sn2code
 from split_toa5 import split_toa5, DEFAULT_MAX_LINES, DEFAULT_HDR_LINES
 from standardize_toa5 import standardize_toa5
 from version import version as __version__
@@ -74,6 +75,7 @@ class CFTransferUtility(Frame):
         self.pack(expand=YES, fill=BOTH)
 
         self._cc_path = self.__find_CardConvert()
+        self._read_conf()
 
         self._num_threads = 8 # TIP modify # of processing threads available
 
@@ -85,7 +87,7 @@ class CFTransferUtility(Frame):
         if source_dir:
             self._srcdir.set(source_dir)
             self.__enable_eject_btn()
-            self.__refresh()
+            self.search_source_path()
 
         #### nasty work-around for split_toa5 logger output
         self.log.write = self.log.info
@@ -94,6 +96,17 @@ class CFTransferUtility(Frame):
         if self.log.isEnabledFor(logging.DEBUG):
             self.log.debug('Debug enabled: verbose output will be shown.\n')
 
+    def _read_conf(self):
+        """Look for & read configuration file, if present"""
+        parser = SafeConfigParser()
+        configfile = osp.splitext(osp.basename(sys.argv[0]))[0] + '.ini'
+        SITEMAP = 'site_sn_map'
+        parser.read([configfile])
+        self._site_name_map = {}
+        if parser.has_section(SITEMAP):
+            for serno in parser.options(SITEMAP):
+                sitecode = parser.get(SITEMAP, serno)
+                self._site_name_map[str(serno)] = sitecode
 
     def __gui_setup(self):
         """Put gui widgets onto frame"""
@@ -131,7 +144,7 @@ class CFTransferUtility(Frame):
         btn_browsesrc = Button(that, text='Browse',
                                command=self.__set_srcdir)
         btn_refresh = Button(that, text='Refresh',
-                             command=self.__refresh)
+                             command=self.search_source_path)
         btn_viewsrc = Button(that, text='View',
                              command=self.__view_srcdir)
         btn_viewsrc.pack(side=RIGHT, expand=NO, padx=(5,0))
@@ -298,13 +311,13 @@ class CFTransferUtility(Frame):
         top = LabelFrame(parent, padx=5, pady=5, relief=RIDGE,
                          text='Files found')
         self._resultstree = Treeview(top,selectmode='none',
-                        columns=('site', 'size', 'ascii-fname'))
+                        columns=('serno', 'size', 'table', 'tsstr', 'fname'))
         self._resultstree.heading('#0', text='Source file path', anchor=W)
-        self._resultstree.heading('site', text='Site code = %(site)s',
-                                                           anchor=W)
+        self._resultstree.heading('serno', text='Serial no.', anchor=W)
         self._resultstree.heading('size', text='File size', anchor=W)
-        self._resultstree.heading('ascii-fname', anchor=W,
-                                  text='Plain-text data file destination name')
+        self._resultstree.heading('table', text='Data table name', anchor=W)
+        self._resultstree.heading('tsstr', text='Timestamp', anchor=W)
+        self._resultstree.heading('fname', text='TOA5 file name', anchor=W)
         self._resultstree.pack(side=TOP, expand=YES, fill=BOTH)
         return top
 
@@ -375,7 +388,7 @@ class CFTransferUtility(Frame):
             choice = osp.normpath(choice)
             self._srcdir.set(choice)
             self.__enable_eject_btn()
-        self.__refresh()
+        self.search_source_path()
 
 
     def __enable_eject_btn(self):
@@ -454,13 +467,13 @@ class CFTransferUtility(Frame):
         return newval.isdigit()
 
 
-    def __refresh(self):
+    def search_source_path(self):
         srcdir = self._srcdir.get()
         if not osp.isdir(srcdir):
             self.log.info('! Invalid source directory: %s\n' % srcdir)
             flist = []
         else:
-            flist = self.__list_dat_files(srcdir)
+            flist = self.list_files_in(srcdir)
         self.__profile_files(flist)
         valid_files = self.__refresh_profiler()
         btn_state = True if valid_files else False
@@ -476,17 +489,20 @@ class CFTransferUtility(Frame):
         for row in w.get_children():
             w.delete(row)
         for (fpath, meta) in sorted(self._results.items()):
-            site, fsize, aname = meta['site'], meta['size'], meta['ascii-fname']
+            (serno, fsize, table, cdate, fname) = (meta['serno'],
+                                                   meta['size'],
+                                                   meta['table'],
+                                                   meta['tsstr'],
+                                                   meta['fname'])
             tags = []
             if split and (fsize > maxsize):
                 tags.append('+size')
-            if not aname:
+            if not table:
                 tags.append('invalid')
             else:
                 valid_files.append(fpath)
             w.insert('', END, iid=fpath, text=fpath, tags=tags,
-                     values=[site, str(fsize)+' KB', "TOA5_"+aname])
-                     #### HACK CardConvert will prepend files with "TOA5_"
+                     values=[serno, str(fsize)+' KB', table, cdate, "TOA5_"+fname])
         self._resultstree.tag_configure('+size', background='lightgray')
         self._resultstree.tag_configure('invalid', background='pink')
         return valid_files
@@ -511,7 +527,7 @@ class CFTransferUtility(Frame):
     ##########################
 
 
-    def __list_dat_files(self, in_dir):
+    def list_files_in(self, in_dir):
         """return list of TOB3-formatted files in source directory """
         if not in_dir or not osp.isdir(in_dir):
             return []
@@ -520,9 +536,11 @@ class CFTransferUtility(Frame):
         flist = glob(osp.join(in_dir, '*.dat'))
         return sorted(flist)
 
+    def serno2code(self, serno):
+        """Attempt to look up site code from serial no"""
+        return self._site_name_map.get(serno, serno)
 
     class _FileFormatError(Exception): pass
-    class _NonparticipantError(Exception): pass
 
     def __extract_tob3_metadata(self, tob3):
         """extract metadata from file"""
@@ -540,12 +558,8 @@ class CFTransferUtility(Frame):
         if ftype != 'TOB3':
             msg = 'Invalid file format: %s' % ftype
             raise self._FileFormatError(msg)
-        site = sn2code.get(serno)
-        if site is None:
-            msg = ('Unrecognized logger: S/N %s' % serno)
-            raise self._NonparticipantError(msg)
-
-        return {'site':site, 'tsstr':tsstr, 'table':table}
+        site = self.serno2code(serno)
+        return {'serno':serno, 'tsstr':tsstr, 'table':table, 'site':site}
 
 
     def __create_asciidest_fname(self, site, table, tstamp):
@@ -567,17 +581,19 @@ class CFTransferUtility(Frame):
             except IOError as err:
                 self.log.info('! Could not profile file: %s\n' % str(err))
                 continue
-            except (self._FileFormatError, self._NonparticipantError) as err:
-                self._results[fname] = {'site': str(err), 'size':fsize,
-                                'table':'', 'ascii-fname':''}
+            except (self._FileFormatError) as err:
+                self._results[fname] = {'serno': str(err), 'size':fsize,
+                                'table':'', 'tsstr':'', 'site':'', 'fname':''}
                 continue
-            asciidestname = self.__create_asciidest_fname(meta['site'],
-                                                          meta['table'],
-                                                          meta['tsstr'])
-            self._results[fname] = {'site' : meta['site'],
+            toa5name = self.__create_asciidest_fname(meta['site'],
+                                                     meta['table'],
+                                                     meta['tsstr'])
+            self._results[fname] = {'serno' : meta['serno'],
                                     'size' : fsize,
                                     'table' : meta['table'],
-                                    'ascii-fname' : asciidestname}
+                                    'tsstr' : meta['tsstr'],
+                                    'site' : meta['site'],
+                                    'fname' : toa5name}
 
 
     def __begin_processing(self):
@@ -593,8 +609,8 @@ class CFTransferUtility(Frame):
         # segregate by do/don't process and source site
         bysite = {}
         for (fname, meta) in sorted(self._results.items()):
-            if not meta['ascii-fname']:
-                self.log.info('! Skipping %s (%s) \n' % (fname, meta['site']))
+            if not meta['fname']:
+                self.log.info('! Skipping %s (%s) \n' % (fname, meta['serno']))
                 continue
             asite = bysite.setdefault(meta['site'], {})
             asite[fname] = meta
@@ -608,7 +624,7 @@ class CFTransferUtility(Frame):
             tmpdir = tempfile.mkdtemp(dir=self._srcdir.get())
             tmp_dirs[site] = tmpdir
             for origname, meta in files.items():
-                newname = osp.join(tmpdir, meta['ascii-fname'])
+                newname = osp.join(tmpdir, meta['fname'])
                 os.rename(origname, newname)
                 orig_names[newname] = origname
                 to_process[newname] = meta
@@ -627,7 +643,7 @@ class CFTransferUtility(Frame):
             for (site, dir_) in tmp_dirs.items():
                 source = dir_
                 target = self._destdir_ascii.get() % {'site' : site}
-                existing_files[target] = set(self.__list_dat_files(target))
+                existing_files[target] = set(self.list_files_in(target))
                 ccQ.put( (source, target, set_ro, set_arc, do_md5) )
             while ccQ.unfinished_tasks:
                 self.parent.update_idletasks()
@@ -645,7 +661,7 @@ class CFTransferUtility(Frame):
                     T.setDaemon(True)
                     T.start()
                 for target, fileset in existing_files.items():
-                    new_files = list(set(self.__list_dat_files(target)) - fileset)
+                    new_files = list(set(self.list_files_in(target)) - fileset)
                     to_split = [f for f in new_files if osp.getsize(f) > maxsize]
                     if not to_split:
                         self.log.info('~ No oversized files found in %s \n' %
@@ -660,7 +676,7 @@ class CFTransferUtility(Frame):
                     self.log.info('\nStarting standardizing routine \n')
                     for src, files in existing_files.items():
                         self.log.debug('Source directory: %s \n' % src)
-                        to_stdize = list(set(self.__list_dat_files(src))-files)
+                        to_stdize = list(set(self.list_files_in(src))-files)
                         for ea in sorted(to_stdize):
                             if osp.getsize(ea) > maxsize:
                                 self.log.info('~ Skipping oversized file %s ...' % ea)
@@ -749,12 +765,12 @@ class CFTransferUtility(Frame):
                             do_md5sums=False):
         self.log.debug('Entering binary file conversion routine \n')
 
-        orig_files = set(self.__list_dat_files(target))
+        orig_files = set(self.list_files_in(target))
 
         # TODO handle need to overwriting existing files
         self._CardConvert(source, target)
 
-        new_files = list(set(self.__list_dat_files(target)) - orig_files)
+        new_files = list(set(self.list_files_in(target)) - orig_files)
         for ea in new_files:
             if set_ro:
                 self._set_readonly_attr(ea)
@@ -847,7 +863,7 @@ BaleInterval=32875
     def __empty_srcdir(self, no_confirm=False):
         """delete all data files in source directory"""
         self.log.info('Emptying source directory (%s)\n' % self._srcdir.get())
-        flist = self.__list_dat_files(self._srcdir.get())
+        flist = self.list_files_in(self._srcdir.get())
         if not flist:
             self.log.info('No source files to delete \n')
             return # ignore if empty
@@ -876,7 +892,7 @@ BaleInterval=32875
         if not quickly and srcdir and osp.isdir(srcdir):
             drive, path = osp.splitdrive(srcdir.rstrip('\\').rstrip('/'))
             if not path and self._is_removable_media(srcdir):
-                flist = self.__list_dat_files(self._srcdir.get())
+                flist = self.list_files_in(self._srcdir.get())
                 if flist:
                     msg = ('Would you like to permanently delete all %s TOB3 '
                           'data files in the source directory before exit?' %
