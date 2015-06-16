@@ -18,7 +18,7 @@ from subprocess import check_output, CalledProcessError
 from threading import Thread
 from Queue import Queue
 
-from ConfigParser import SafeConfigParser
+from ConfigParser import RawConfigParser
 
 from Tkinter import *   # analysis:ignore
 from ttk import Treeview
@@ -30,7 +30,6 @@ from tkMessageBox import (askokcancel, askyesnocancel, askyesno,
 from win32file import GetDriveType, DRIVE_REMOVABLE
 
 from definitions.fileio import MAX_RAW_FILE_SIZE
-from definitions.paths import RAW_ASCII, RAW_STDFMT
 from split_toa5 import split_toa5, DEFAULT_MAX_LINES, DEFAULT_HDR_LINES
 from standardize_toa5 import standardize_toa5
 from version import version as __version__
@@ -47,9 +46,6 @@ class CFTransferUtility(Frame):
         self._results = {}
 
         self._srcdir = StringVar() # init later on
-
-        self._defdir_ascii = RAW_ASCII
-        self._defdir_stdfmt = RAW_STDFMT
 
         self._destdir_ascii = StringVar()
         self._destdir_stdfmt = StringVar()
@@ -82,12 +78,13 @@ class CFTransferUtility(Frame):
         self.__set_defdir_ascii()
         self.__set_defdir_stdfmt()
 
-        self.__enable_proc_btn(False)
-
+        self._srcdir.set(self._defdir_source)
         if source_dir:
             self._srcdir.set(source_dir)
             self.__enable_eject_btn()
             self.search_source_path()
+
+        self.__enable_proc_btn(False)
 
         #### nasty work-around for split_toa5 logger output
         self.log.write = self.log.info
@@ -98,15 +95,27 @@ class CFTransferUtility(Frame):
 
     def _read_conf(self):
         """Look for & read configuration file, if present"""
-        parser = SafeConfigParser()
+        conf = RawConfigParser(defaults={'source':'',
+                                         'output_toa5':'',
+                                         #### TODO add archive path
+                                         'output_stdfmt':''})
         configfile = osp.splitext(osp.basename(sys.argv[0]))[0] + '.ini'
+        PATHS = 'paths'
         SITEMAP = 'site_sn_map'
-        parser.read([configfile])
+        conf.read([configfile])
+
+        if conf.has_section(PATHS):
+            self._defdir_source = conf.get(PATHS, 'source')
+            self._defdir_ascii = conf.get(PATHS, 'output_toa5')
+            #### TODO add archive dest path
+            self._defdir_stdfmt = conf.get(PATHS, 'output_stdfmt')
+
         self._site_name_map = {}
-        if parser.has_section(SITEMAP):
-            for serno in parser.options(SITEMAP):
-                sitecode = parser.get(SITEMAP, serno)
+        if conf.has_section(SITEMAP):
+            for serno in conf.options(SITEMAP):
+                sitecode = conf.get(SITEMAP, serno)
                 self._site_name_map[str(serno)] = sitecode
+
 
     def __gui_setup(self):
         """Put gui widgets onto frame"""
