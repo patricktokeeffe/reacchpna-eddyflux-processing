@@ -422,13 +422,16 @@ class CFTransferUtility(Frame):
         self.__ent_ascii_lines.config(state=state)
         self.__chb_ascii_del.config(state=state)
         self.__chb_do_stdfmt.config(state=state)
-        self.__ent_deststdfmt.config(state=state)
+        self.__enable_stdfmt_opts()
         self.__refresh_profiler() # b/c of oversized file highlighting
 
 
     def __enable_stdfmt_opts(self):
         """if re-writing to std format, enable associated options"""
-        state = NORMAL if self._do_stdfmt.get() else DISABLED
+        if self._split_large_files.get() and self._do_stdfmt.get():
+            state = NORMAL
+        else:
+            state = DISABLED
         self.__ent_deststdfmt.config(state=state)
         self.__btn_browsestdfmt.config(state=state)
         self.__btn_defstdfmt.config(state=state)
