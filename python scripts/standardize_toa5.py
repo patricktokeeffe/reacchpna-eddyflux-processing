@@ -547,7 +547,7 @@ if __name__ == '__main__':
                    help='directory to search, full or rel. path')
     p.add_argument('-o', '--out', nargs='?',
                    help=('output directory, full or rel. path; can use '
-                         '"%(site)s", "%(table)s" and "%(date)s" to get site '
+                         '"%%(site)s", "%%(table)s" and "%%(date)s" to get site '
                          '4-char code, data table name, or starting date of '
                          'data table in output path'))
     p.add_argument('-v', '--verbose', action='store_true',
