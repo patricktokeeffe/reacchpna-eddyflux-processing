@@ -24,7 +24,7 @@ import os.path as osp
 
 
 # Base directory for project
-HOME = r'B:\proj\2011_REACCH' # for lar-d216-share.cee.wsu.edu
+HOME = r'C:\test\2011_REACCH' # for lar-d216-share.cee.wsu.edu
 
 # Path to recently downloaded telemetry files
 TELEMETRY_SRC = r'C:\Campbellsci\Loggernet' # for lar-d216-share.cee.wsu.edu
@@ -39,6 +39,7 @@ TOWERDATA = osp.join(HOME, r'tower_%(site)s')
 RAW_BINARY = osp.join(TOWERDATA, r'L0_raw_binary') # copies from cards
 RAW_ASCII = osp.join(TOWERDATA, r'L0_raw_ascii') # plain-text conversions
 RAW_STDFMT = osp.join(TOWERDATA, r'L0_standard_format') # after standardizing
+RAW_ARCHIVE = osp.join(TOWERDATA, r'L0_raw_archives') # archived plain-text data
 TELEMETRY = osp.join(TOWERDATA, r'L0_telemetry') # standardized telemetry data
 
 # Monitoring tower timelapse cameras

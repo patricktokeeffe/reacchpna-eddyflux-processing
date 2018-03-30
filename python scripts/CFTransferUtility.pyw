@@ -28,7 +28,7 @@ from tkMessageBox import (askokcancel, askyesnocancel, askyesno,
 from win32file import GetDriveType, DRIVE_REMOVABLE
 
 from definitions.fileio import MAX_RAW_FILE_SIZE
-from definitions.paths import RAW_ASCII, RAW_STDFMT
+from definitions.paths import RAW_ASCII, RAW_STDFMT, RAW_ARCHIVE
 from definitions.sites import sn2code
 from split_toa5 import split_toa5, DEFAULT_MAX_LINES, DEFAULT_HDR_LINES
 from standardize_toa5 import standardize_toa5
@@ -49,9 +49,11 @@ class CFTransferUtility(Frame):
 
         self._defdir_ascii = RAW_ASCII
         self._defdir_stdfmt = RAW_STDFMT
+        self._defdir_archive = RAW_ARCHIVE
 
         self._destdir_ascii = StringVar()
         self._destdir_stdfmt = StringVar()
+        self._destdir_archive = StringVar()
 
         self._do_ascii = BooleanVar(value=True)
         self._do_stdfmt = BooleanVar(value=True)
@@ -82,6 +84,7 @@ class CFTransferUtility(Frame):
 
         self.__set_defdir_ascii()
         self.__set_defdir_stdfmt()
+        self.__set_defdir_archive()
 
         self.__enable_proc_btn(False)
 
@@ -181,8 +184,14 @@ class CFTransferUtility(Frame):
         archiveopt = Frame(this)
         chb_archive = Checkbutton(archiveopt,
                                   text="Create .zip archive",
-                                  variable=self._do_archive)
+                                  variable=self._do_archive,
+                                  command=self.__enable_archive_opts)
+        ent_archive_dest = Entry(archiveopt, textvariable=self._destdir_archive)
+        btn_browsearchive = Button(archiveopt, text='Browse',
+                                   command=self.__set_destdir_archive)
         chb_archive.pack(side=LEFT, expand=NO)
+        btn_browsearchive.pack(side=RIGHT, expand=NO, padx=(5,0))
+        ent_archive_dest.pack(side=LEFT, expand=YES, fill=X)
 
         ## ensure 'numeric' field entries always contain (only) numbers
         isdigit_validator = (self.register(self.__verify_ent_isdigit), '%P')
@@ -280,14 +289,17 @@ class CFTransferUtility(Frame):
         self.__chb_ascii_arc = chb_ascii_arc
         self.__chb_md5sum = chb_md5sum
         self.__chb_archive = chb_archive
+        self.__ent_archive_dest = ent_archive_dest
+        self.__btn_browsearchive = btn_browsearchive
         self.__chb_ascii_split = chb_ascii_split
         self.__ent_ascii_lines = ent_ascii_lines
         self.__ent_ascii_size = ent_ascii_size
         self.__chb_ascii_del = chb_ascii_del
         todisable.extend([chb_do_ascii, ent_destascii, btn_browseascii,
                           btn_defascii, chb_ascii_ro, chb_ascii_arc,
-                          chb_md5sum, chb_archive, chb_ascii_split,
-                          ent_ascii_lines, ent_ascii_size, chb_ascii_del])
+                          chb_md5sum, chb_archive, ent_archive_dest,
+                          btn_browsearchive, chb_ascii_split, ent_ascii_lines,
+                          ent_ascii_size, chb_ascii_del])
 
         self.__chb_do_stdfmt = chb_do_stdfmt
         self.__ent_deststdfmt = ent_deststdfmt
@@ -436,6 +448,9 @@ class CFTransferUtility(Frame):
         self.__chb_ascii_ro.config(state=state)
         self.__chb_ascii_arc.config(state=state)
         self.__chb_md5sum.config(state=state)
+        self.__chb_archive.config(state=state)
+        self.__ent_archive_dest.config(state=state)
+        self.__btn_browsearchive.config(state=state)
         self.__chb_ascii_split.config(state=state)
         self.__ent_ascii_size.config(state=state)
         self.__ent_ascii_lines.config(state=state)
@@ -461,6 +476,15 @@ class CFTransferUtility(Frame):
         self.__ent_deststdfmt.config(state=state)
         self.__refresh_profiler() # b/c of oversized file highlighting
 
+    def __enable_archive_opts(self):
+        """if creating zip file"""
+        if (self._do_ascii.get() and self._do_archive.get()):
+            state = NORMAL
+        else:
+            state = DISABLED
+        self.__ent_archive_dest.config(state=state)
+        self.__btn_browsearchive.config(state=state)
+
 
     def __enable_stdfmt_opts(self):
         """if re-writing to std format, enable associated options"""
@@ -477,6 +501,8 @@ class CFTransferUtility(Frame):
         self.__set_destdir(var=self._destdir_ascii, name='plain-text')
     def __set_destdir_stdfmt(self):
         self.__set_destdir(var=self._destdir_stdfmt, name='standard format')
+    def __set_destdir_archive(self):
+        self.__set_destdir(var=self._destdir_archive, name='archived')
 
 
     def __set_destdir(self, var, name):
@@ -491,6 +517,8 @@ class CFTransferUtility(Frame):
         self._destdir_ascii.set(self._defdir_ascii)
     def __set_defdir_stdfmt(self):
         self._destdir_stdfmt.set(self._defdir_stdfmt)
+    def __set_defdir_archive(self):
+        self._destdir_archive.set(self._defdir_archive)
 
 
     def __view_srcdir(self):
@@ -809,8 +837,9 @@ class CFTransferUtility(Frame):
 
         try:
             cmd = '"%(7zpath)s" a -tzip "%(outfile)s" "%(files)s"'
+            outpath = self
             rc = check_output(cmd % {'7zpath': exepath,
-                                     'outfile' : destdir,
+                                     #'outfile' : ,
                                      'files' : '" "'.join(filelist)},
                               shell=True)
             self.log.info('\n%s\n' % rc)
@@ -852,7 +881,7 @@ class CFTransferUtility(Frame):
             if self._checksum_ascii(new_files):
                 new_files.append(osp.join(target, 'md5sums'))
         if do_archive:
-            self._archive_ascii(new_files, target) #### TODO different target
+            self._archive_ascii(new_files) #### TODO different target
 
 
     def _CardConvert(self, source_dir, target_dir):
